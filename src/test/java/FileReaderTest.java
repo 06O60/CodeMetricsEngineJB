@@ -1,6 +1,4 @@
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -67,7 +65,7 @@ public class FileReaderTest {
 
 	@Test
 	public void testMethodWithThrows() throws IOException {
-		File file = createTempFile("public void methodWithThrows() throws Exception {\n        // Method body\n    }\n");
+		File file = createTempFile("public void methodWithThrows() throws Exception, IOException {\n        // Method body\n    }\n");
 		String[] methods = FileReader.getMethodStringsFromFile(file);
 		assertNotNull(methods);
 		assertEquals(1, methods.length);

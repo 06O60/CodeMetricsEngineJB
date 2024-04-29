@@ -111,9 +111,8 @@ public class FileReader {
 		String fileContents = readFileContents(file);
 
 		// Regex pattern to match method definition
-		//TODO: currently the regex might not handle throws in method signatures
-		//also constructors might not work
-		String methodPattern = "\\b(?!record)\\w+\\b(?:<[^<>]+(?:<[^<>]+>)*>)?\\s+\\w+\\s*\\([^()]*\\)\\s*\\{";
+		String methodPattern = "\\b(?!record)\\w+\\b(?:<[^<>]+(?:<[^<>]+>)*>)?\\s+\\w+\\s*\\([^()]*\\)\\s*(?:throws\\s+\\w+(?:,\\s*\\w+)*)?\\s*\\{";
+
 		Pattern pattern = Pattern.compile(methodPattern);
 		Matcher matcher = pattern.matcher(fileContents);
 
