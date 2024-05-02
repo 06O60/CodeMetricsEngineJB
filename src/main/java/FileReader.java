@@ -14,11 +14,11 @@ import java.util.regex.Pattern;
  * Utility class for reading Java/Kotlin files and extracting methods.
  */
 public class FileReader {
-	private String directoryPath;
+	private final String directoryPath;
 	File[] files;
-	String[] methods;
-	int filesIterator = 0;
-	int methodIterator = 0;
+	Function[] methods;
+	int filesIterator;
+	int methodIterator;
 
 	/**
 	 * Constructs a FileReader object with the specified directory path.
@@ -28,6 +28,7 @@ public class FileReader {
 	public FileReader (String directoryPath) {
 		this.directoryPath = directoryPath;
 		filesIterator = 0;
+		methodIterator = 0;
 	}
 
 	/**
@@ -77,11 +78,12 @@ public class FileReader {
 	 * Sets up the methods array to contain the methods of the retrieved file.
 	 *
 	 * @return The name of the next file, or null if there are no more files.
-	 * @throws FileNotFoundException If a file with the specified path could not be found.
 	 */
-	public String getNextFileName () throws FileNotFoundException {
+	public String getNextFileName () throws IOException, SecurityException {
+		if(files == null)
+			files = getFiles();
 		if(files.length < filesIterator) {
-			methods = getMethodStringsFromFile(files[filesIterator]);
+			methods = getFunctionStringsFromFile(files[filesIterator]);
 			methodIterator = 0;
 			return files[filesIterator++].getName();
 		}
@@ -93,7 +95,7 @@ public class FileReader {
 	 *
 	 * @return The next method, or null if there are no more methods in the current file.
 	 */
-	public String getNextMethod () {
+	public Function getNextFunction () {
 		return (methodIterator < methods.length) ? methods[methodIterator++] : null;
 	}
 
@@ -104,8 +106,8 @@ public class FileReader {
 	 * @return An array of method strings.
 	 * @throws FileNotFoundException If the file could not be found.
 	 */
-	protected static String[] getMethodStringsFromFile(File file) throws FileNotFoundException {
-		List<String> methods = new ArrayList<>();
+	protected static Function[] getFunctionStringsFromFile (File file) throws FileNotFoundException {
+		List<Function> functions = new ArrayList<>();
 
 		// Read the file contents into a string
 		String fileContents = readFileContents(file);
@@ -117,11 +119,11 @@ public class FileReader {
 		Matcher matcher = pattern.matcher(fileContents);
 
 		while (matcher.find()) {
-			String method = extractMethod(matcher.group(), fileContents);
-			methods.add(method);
+			Function function = extractFunction(matcher.group(), fileContents);
+			functions.add(function);
 		}
 
-		return methods.toArray(new String[0]);
+		return functions.toArray(new Function[0]);
 	}
 
 
@@ -143,28 +145,38 @@ public class FileReader {
 	}
 
 	/**
-	 * Extracts a method from the file contents based on its signature.
+	 * Extracts a function from the file contents based on its signature.
 	 *
-	 * @param methodSignature The signature of the method to extract.
+	 * @param functionSignature The signature of the method to extract.
 	 * @param fileContents    The contents of the file to extract the method from.
 	 * @return The extracted method.
 	 */
-	private static String extractMethod(String methodSignature, String fileContents) {
-		int methodStartIndex = fileContents.indexOf(methodSignature);
-		int methodEndIndex = findMethodEndIndex(methodStartIndex, fileContents);
-		return fileContents.substring(methodStartIndex, methodEndIndex);
+	private static Function extractFunction (String functionSignature, String fileContents) {
+		String functionName = extractFunctionName(functionSignature);
+		int functionStartIndex = fileContents.indexOf(functionSignature);
+		int functionEndIndex = findFunctionEndIndex(functionStartIndex, fileContents);
+		return new Function(functionName, fileContents.substring(functionStartIndex, functionEndIndex));
+	}
+
+	private static String extractFunctionName (String functionSignature) {
+		String methodNamePattern = "([a-zA-Z0-9_$]+) *\\(";
+		Pattern pattern = Pattern.compile(methodNamePattern);
+		Matcher matcher = pattern.matcher(functionSignature);
+		matcher.find();
+		String functionName = matcher.group(1);
+		return functionName;
 	}
 
 	/**
 	 * Finds the end index of a method in the file contents string, given its start index.
 	 *
-	 * @param methodStartIndex The start index of the method in the file contents.
+	 * @param functionStartIndex The start index of the method in the file contents.
 	 * @param fileContents     The contents of the file.
 	 * @return The end index of the method.
 	 */
-	private static int findMethodEndIndex(int methodStartIndex, String fileContents) {
+	private static int findFunctionEndIndex (int functionStartIndex, String fileContents) {
 		int curlyBraceCount = 0;
-		int index = methodStartIndex;
+		int index = functionStartIndex;
 		while (index < fileContents.length()) {
 			char c = fileContents.charAt(index);
 			if (c == '{') {
@@ -177,7 +189,7 @@ public class FileReader {
 			}
 			index++;
 		}
-		return index; // Method end not found, return end of file
+		return index; // Function end not found, return end of file
 	}
 
 
