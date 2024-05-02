@@ -8,10 +8,11 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class FileReaderTest {
-	private File bigJavaCodeFile = new File("src/test/resources/MaxFlow.java");
+	private final File bigJavaCodeFile = new File("src/test/resources/MaxFlow.java");
 	private File tmpFile;
-	private File createTempFile(String content) throws IOException {
-		tmpFile = File.createTempFile("TestClass", ".java", new File("src/test/resources"));
+
+	private File createTempFile (String content) throws IOException {
+		tmpFile = File.createTempFile("TestClass", ".java", new File("src/test/resources/tmp"));
 		try (FileWriter writer = new FileWriter(tmpFile)) {
 			writer.write("public class TestClass {\n");
 			writer.write(content);
@@ -21,74 +22,100 @@ public class FileReaderTest {
 	}
 
 	@AfterEach
-	public void deleteTemporaryFiles() {
-		if(tmpFile != null)
+	public void deleteTemporaryFiles () {
+		if (tmpFile != null)
 			tmpFile.delete();
 	}
 
 	@Test
-	public void testGetMethodStringsFromFile () {
-		try {
-			String[] methods = FileReader.getMethodStringsFromFile(bigJavaCodeFile);
-			assertEquals(29, methods.length);
-		} catch (Exception e) {
-			System.out.println(e);
-		}
+	public void testGetMethodStringsFromFile_validFileProvided_returnsExpectedNumberOfMethods () throws IOException {
+		Function[] methods = new FileReader("src/test/resources").getFunctionStringsFromFile(bigJavaCodeFile);
+		assertEquals(29, methods.length);
 	}
 
+	// The following tests check whether given a method in a java file, the getMethodStringsFromFile correctly detects
+	// the method name, and correctly identifies the method body
 	@Test
-	public void testMethodWithAccessor() throws IOException {
-		File file = createTempFile("public void methodWithAccessor() {\n        // Method body\n    }\n");
-		String[] methods = FileReader.getMethodStringsFromFile(file);
+	public void testGetMethodStringsFromFile_methodWithAccessorProvided_returnsCorrectMethodNameAndBody() throws IOException {
+		File file = createTempFile("public void methodWithAccessor    () {\n        // Method body\n    }\n");
+		FileReader fileReader = new FileReader("src/test/resources/tmp");
+		fileReader.getNextFileName();
+
+		Function[] methods = FileReader.getFunctionStringsFromFile(file);
+
 		assertNotNull(methods);
 		assertEquals(1, methods.length);
-		assertTrue(methods[0].contains("methodWithAccessor()"));
+		assertEquals("methodWithAccessor", methods[0].name());
+		assertTrue(methods[0].body().contains("void methodWithAccessor    () {\n        // Method body\n    }"));
 	}
-
 	@Test
-	public void testMethodWithoutAccessor() throws IOException {
+	public void testGetMethodStringsFromFile_methodWithoutAccessorProvided_returnsCorrectMethodNameAndBody() throws IOException {
 		File file = createTempFile("void methodWithoutAccessor() {\n        // Method body\n    }\n");
-		String[] methods = FileReader.getMethodStringsFromFile(file);
+		FileReader fileReader = new FileReader("src/test/resources/tmp");
+		fileReader.getNextFileName();
+
+		Function[] methods = fileReader.getFunctionStringsFromFile(file);
+
 		assertNotNull(methods);
 		assertEquals(1, methods.length);
-		assertTrue(methods[0].contains("methodWithoutAccessor()"));
+		assertEquals("methodWithoutAccessor", methods[0].name());
+		assertTrue(methods[0].body().contains("void methodWithoutAccessor() {\n        // Method body\n    }"));
 	}
 
 	@Test
-	public void testConstructorMethod() throws IOException {
+	public void testGetMethodStringsFromFile_constructorMethodProvided_returnsCorrectClassNameAndBody () throws IOException {
 		File file = createTempFile("public TestClass() {\n        // Constructor body\n    }\n");
-		String[] methods = FileReader.getMethodStringsFromFile(file);
+		FileReader fileReader = new FileReader("src/test/resources/tmp");
+
+		Function[] methods = fileReader.getFunctionStringsFromFile(file);
+
 		assertNotNull(methods);
 		assertEquals(1, methods.length);
-		assertTrue(methods[0].contains("TestClass()"));
+		assertEquals("TestClass", methods[0].name());
+		assertTrue(methods[0].body().contains("TestClass()"));
 	}
 
 	@Test
-	public void testMethodWithThrows() throws IOException {
-		File file = createTempFile("public void methodWithThrows() throws Exception, IOException {\n        // Method body\n    }\n");
-		String[] methods = FileReader.getMethodStringsFromFile(file);
+	public void testGetMethodStringsFromFile_methodWithThrowsProvided_returnsCorrectMethodNameAndBody () throws IOException {
+		File file = createTempFile(
+				"public void methodWithThrows() throws Exception, IOException {\n        // Method body\n    }\n");
+		FileReader fileReader = new FileReader("src/test/resources/tmp");
+
+		Function[] methods = fileReader.getFunctionStringsFromFile(file);
+
 		assertNotNull(methods);
 		assertEquals(1, methods.length);
-		assertTrue(methods[0].contains("methodWithThrows()"));
+		assertEquals("methodWithThrows", methods[0].name());
+		assertTrue(methods[0].body().contains("methodWithThrows()"));
 	}
 
 	@Test
-	public void testMethodWithGenerics() throws IOException {
+	public void testGetMethodStringsFromFile_methodWithGenericsProvided_returnsCorrectMethodNameAndBody () throws IOException {
 		File file = createTempFile("public <T> void methodWithGenerics(T param) {\n        // Method body\n    }\n");
-		String[] methods = FileReader.getMethodStringsFromFile(file);
+		FileReader fileReader = new FileReader("src/test/resources/tmp");
+
+		Function[] methods = fileReader.getFunctionStringsFromFile(file);
+
 		assertNotNull(methods);
 		assertEquals(1, methods.length);
-		assertTrue(methods[0].contains("methodWithGenerics(T param)"));
+		assertEquals("methodWithGenerics", methods[0].name());
+		assertTrue(methods[0].body().contains("void methodWithGenerics(T param) {\n        // Method body\n    }"));
 	}
 
 	@Test
-	public void testMethodInNestedClass() throws IOException {
-		File file = createTempFile("static class NestedClass {\n        public void methodInNestedClass() {\n            // Method body\n        }\n    }\n");
-		String[] methods = FileReader.getMethodStringsFromFile(file);
+	public void testGetMethodStringsFromFile_methodInNestedClassProvided_returnsCorrectMethodNameAndBody () throws IOException {
+		File file = createTempFile(
+				"static class NestedClass {\n        public void methodInNestedClass() {\n            // Method " +
+						"body\n" +
+						"        }\n    }\n");
+		FileReader fileReader = new FileReader("src/test/resources/tmp");
+
+		Function[] methods = fileReader.getFunctionStringsFromFile(file);
+
 		assertNotNull(methods);
 		assertEquals(1, methods.length);
-		assertTrue(methods[0].contains("methodInNestedClass()"));
+		assertEquals("methodInNestedClass", methods[0].name());
+		assertTrue(methods[0].body().contains("methodInNestedClass()"));
 	}
-
 }
 
