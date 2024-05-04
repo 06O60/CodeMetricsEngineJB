@@ -83,7 +83,7 @@ public class FileReader {
 	public String getNextFileName () throws IOException, SecurityException {
 		if(files == null)
 			files = getFiles();
-		if(files.length < filesIterator) {
+		if(filesIterator < files.length) {
 			methods = getFunctionStringsFromFile(files[filesIterator]);
 			methodIterator = 0;
 			return files[filesIterator++].getName();
