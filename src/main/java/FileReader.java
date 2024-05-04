@@ -70,7 +70,8 @@ public class FileReader {
 	 * @return True if the file is a compilable Java or Kotlin code, false otherwise.
 	 */
 	private static boolean isAnalysableFile (Path filePath) {
-		return (filePath.endsWith(".java") || filePath.endsWith(".kt") || filePath.endsWith(".kts"));
+		String pathString = filePath.toString();
+		return (pathString.endsWith(".java") || pathString.endsWith(".kt") || pathString.endsWith(".kts"));
 	}
 
 	/**
