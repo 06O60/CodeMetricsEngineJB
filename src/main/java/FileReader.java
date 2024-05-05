@@ -10,6 +10,7 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+//TODO implement checking whether the whole directory is compilable, if not do not proceed with checks
 /**
  * Utility class for reading Java/Kotlin files and extracting methods.
  */
