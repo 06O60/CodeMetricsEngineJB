@@ -3,6 +3,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * Utility class for analyzing code complexity of methods.
+ */
 public class CodeComplexityAnalyzer {
 
 	public enum JavaConditionals {
@@ -16,13 +19,29 @@ public class CodeComplexityAnalyzer {
 		TERNARY_OPERATOR("[?][^?]+:[^?]+");
 
 		private final Pattern codePattern;
-		private JavaConditionals (String codeString) {
+		JavaConditionals (String codeString) {
 			this.codePattern = Pattern.compile(codeString);
 		}
+
+		/**
+		 * Get the pattern associated with the conditional.
+		 *
+		 * @return The pattern.
+		 */
 		public Pattern getCodePattern() {
 			return codePattern;
 		}
 	}
+
+	/**
+	 * Evaluates the complexity of a list of functions.
+	 * NOTE: this function skips functions with complexity 0
+	 * e.g. if the resultLength is 3 but there are only 2 functions with complexity > 0, then the resulting list
+	 * will have the size of 2.
+	 * @param functions    The list of functions to analyze.
+	 * @param resultLength The length of the result list.
+	 * @return A list of pairs containing method names and their complexity, sorted from highest to lowest complexity.
+	 */
 
 	public static List<Pair<String, Integer>> evaluateComplexity(List<Function> functions, int resultLength) {
 		return functions.stream()
@@ -34,9 +53,14 @@ public class CodeComplexityAnalyzer {
 	}
 
 	//TODO: document why i decided to count if, else, else if separately
-	//TODO: do not count any conditional operators that are in the comments!
+	/**
+	 * Evaluates the complexity of a single method.
+	 *
+	 * @param methodToAnalyze The method to analyze.
+	 * @return A pair containing the method name and its complexity.
+	 */
 	protected static Pair<String, Integer> evaluateComplexityOfAMethod (Function methodToAnalyze) {
-		String codeToAnalyze = emptyTheStringLiterals(methodToAnalyze.body());
+		String codeToAnalyze = methodToAnalyze.body();
 		int complexity = 0;
 
 		for(JavaConditionals conditional: JavaConditionals.values()) {
@@ -53,14 +77,5 @@ public class CodeComplexityAnalyzer {
 		}
 
 		return new Pair<>(methodToAnalyze.name(), complexity);
-	}
-
-	//TODO: check if it works for the multiline strings as well
-	protected static String emptyTheStringLiterals(String code) {
-		Pattern pattern = Pattern.compile("\"[^\"]*\"");
-		Matcher matcher = pattern.matcher(code);
-
-		//so any "sdfgd" is in the end ""
-		return matcher.replaceAll("\"\"");
 	}
 }
