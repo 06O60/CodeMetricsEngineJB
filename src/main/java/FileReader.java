@@ -15,10 +15,10 @@ import java.util.regex.Pattern;
  */
 public class FileReader {
 	private final String directoryPath;
-	File[] files;
-	Function[] methods;
-	int filesIterator;
-	int methodIterator;
+	private File[] files;
+	private Function[] methods;
+	private int filesIterator;
+	private int methodIterator;
 
 	/**
 	 * Constructs a FileReader object with the specified directory path.
@@ -45,7 +45,6 @@ public class FileReader {
 		return files;
 	}
 
-	//TODO: the following method should skip files that are not compilable
 	/**
 	 * Retrieves all the analyzable files in the specified directory.
 	 * By analyzable I mean, only the files that contain compilable Java/Kotlin code
@@ -60,7 +59,7 @@ public class FileReader {
 				       .filter(path -> Files.isRegularFile(path) && isAnalysableFile(path))
 				       .map(Path::toFile)
 				       .toArray(File[]::new);
-
+		//TODO: at the end altogether check if the project compiles
 	}
 
 	/**
@@ -75,10 +74,12 @@ public class FileReader {
 	}
 
 	/**
-	 * Retrieves the next Java/Kotlin file name in the directory.
-	 * Sets up the methods array to contain the methods of the retrieved file.
+	 * Retrieves the next Java or Kotlin file name in the directory and prepares
+	 * the methods array to contain the methods of the retrieved file.
 	 *
-	 * @return The name of the next file, or null if there are no more files.
+	 * @return The name of the next file, or {@code null} if there are no more files.
+	 * @throws IOException    If an I/O error occurs while accessing the directory.
+	 * @throws SecurityException If a security manager denies access to the directory.
 	 */
 	public String getNextFileName () throws IOException, SecurityException {
 		if(files == null)
@@ -92,16 +93,16 @@ public class FileReader {
 	}
 
 	/**
-	 * Retrieves the next method from the current file.
+	 * Retrieves the next function from the current file.
 	 *
-	 * @return The next method, or null if there are no more methods in the current file.
+	 * @return The next function, or null if there are no more methods in the current file.
 	 */
 	public Function getNextFunction () {
 		return (methodIterator < methods.length) ? methods[methodIterator++] : null;
 	}
 
 	/**
-	 * Retrieves the method strings from the specified file.
+	 * Retrieves the functions strings from the specified file.
 	 *
 	 * @param file The file from which to extract methods.
 	 * @return An array of method strings.
@@ -160,6 +161,12 @@ public class FileReader {
 		return new Function(functionName, cleanUpRedundantPiecesOfCode(functionBody));
 	}
 
+	/**
+	 * Extracts the name of a function from its signature.
+	 *
+	 * @param functionSignature The signature of the function.
+	 * @return The name of the function.
+	 */
 	private static String extractFunctionName (String functionSignature) {
 		String methodNamePattern = "([a-zA-Z0-9_$]+) *\\(";
 		Pattern pattern = Pattern.compile(methodNamePattern);
@@ -186,7 +193,7 @@ public class FileReader {
 			} else if (c == '}') {
 				curlyBraceCount--;
 				if (curlyBraceCount == 0) {
-					return index + 1; // Return index of closing brace
+					return index + 1;
 				}
 			}
 			index++;
@@ -194,6 +201,24 @@ public class FileReader {
 		return index; // Function end not found, return end of file
 	}
 
+	/**
+	 * Cleans up redundant pieces of code, including string literals and commented-out sections.
+	 * Comments and contents of string literals are considered reduncant, since they
+	 * should not be accounted for during code analysis, since they are not really part of the code
+	 * @param code The code to clean up.
+	 * @return The cleaned-up code.
+	 */
+	protected static String cleanUpRedundantPiecesOfCode(String code) {
+		code = emptyTheStringLiterals(code);
+		return deleteCommentedOutCode(code);
+	}
+
+	/**
+	 * Removes string literals from the provided code.
+	 * Changes each string like "string" into "" in code.
+	 * @param code The code containing string literals.
+	 * @return The code with string literals replaced by empty strings.
+	 */
 	protected static String emptyTheStringLiterals(String code) {
 		Pattern pattern = Pattern.compile("\"[^\"]*\"");
 		Matcher matcher = pattern.matcher(code);
@@ -201,6 +226,13 @@ public class FileReader {
 		//so any "sdfgd" is in the end ""
 		return matcher.replaceAll("\"\"");
 	}
+
+	/**
+	 * Deletes commented-out code from the provided code.
+	 *
+	 * @param code The code containing commented-out sections.
+	 * @return The code with commented-out sections removed.
+	 */
 	protected static String deleteCommentedOutCode(String code) {
 		Pattern pattern = Pattern.compile("//.*|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/");
 		Matcher matcher = pattern.matcher(code);
@@ -208,9 +240,6 @@ public class FileReader {
 		return matcher.replaceAll("");
 	}
 
-	protected static String cleanUpRedundantPiecesOfCode(String code) {
-		code = emptyTheStringLiterals(code);
-		return deleteCommentedOutCode(code);
-	}
+
 
 }
