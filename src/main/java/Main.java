@@ -10,6 +10,9 @@ public class Main {
 		System.out.print("Input the path to the project:");
 		String directoryPath = userInputScanner.nextLine();
 
-		FileReader fileReader = new FileReader(directoryPath);
+		CodeAnalyzer codeAnalyzer = new CodeAnalyzer(directoryPath, 3);
+		System.out.println(codeAnalyzer.analyze());
+
+
 	}
 }
