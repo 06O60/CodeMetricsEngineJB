@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,6 +21,11 @@ public class FileReader {
 	private Function[] methods;
 	private int filesIterator;
 	private int methodIterator;
+
+	private static Pattern javaMethodPattern = Pattern.compile("\\b(?!record)\\w+\\b(?:<[^<>]+(?:<[^<>]+>)*>)?\\s+\\w+\\s*\\([^()]*\\)\\s*(?:throws\\s+\\w+(?:,\\s*\\w+)*)?\\s*\\{");
+
+	private static Pattern kotlinMethodPattern = Pattern.compile("\\b(fun\\s+('[^']*'|(\\w|\\$)+)\\s*([^)]*)[^{}\\n]*\\{|init\\s*\\{|constructor\\s*([^)]*)[^{]*\\{)");
+
 
 	/**
 	 * Constructs a FileReader object with the specified directory path.
@@ -114,15 +120,20 @@ public class FileReader {
 
 		// Read the file contents into a string
 		String fileContents = readFileContents(file);
+		fileContents = cleanUpRedundantPiecesOfCode(fileContents);
 
 		// Regex pattern to match method definition
-		String methodPattern = "\\b(?!record)\\w+\\b(?:<[^<>]+(?:<[^<>]+>)*>)?\\s+\\w+\\s*\\([^()]*\\)\\s*(?:throws\\s+\\w+(?:,\\s*\\w+)*)?\\s*\\{";
+		Pattern pattern;
+		if(file.toString().endsWith(".java"))
+			pattern = javaMethodPattern;
+		else
+			pattern = kotlinMethodPattern;
 
-		Pattern pattern = Pattern.compile(methodPattern);
 		Matcher matcher = pattern.matcher(fileContents);
 
 		while (matcher.find()) {
-			Function function = extractFunction(matcher.group(), fileContents);
+			String fileType = file.getName().endsWith(".java") ? "java" : "kotlin";
+			Function function = extractFunction(matcher.group(), fileContents, fileType);
 			functions.add(function);
 		}
 
@@ -154,12 +165,12 @@ public class FileReader {
 	 * @param fileContents    The contents of the file to extract the method from.
 	 * @return The extracted method.
 	 */
-	private static Function extractFunction (String functionSignature, String fileContents) {
-		String functionName = extractFunctionName(functionSignature);
+	private static Function extractFunction (String functionSignature, String fileContents, String fileType) {
+		String functionName = extractFunctionName(functionSignature, fileType);
 		int functionStartIndex = fileContents.indexOf(functionSignature);
 		int functionEndIndex = findFunctionEndIndex(functionStartIndex, fileContents);
 		String functionBody =fileContents.substring(functionStartIndex, functionEndIndex);
-		return new Function(functionName, cleanUpRedundantPiecesOfCode(functionBody));
+		return new Function(functionName, functionBody);
 	}
 
 	/**
@@ -168,12 +179,17 @@ public class FileReader {
 	 * @param functionSignature The signature of the function.
 	 * @return The name of the function.
 	 */
-	private static String extractFunctionName (String functionSignature) {
-		String methodNamePattern = "([a-zA-Z0-9_$]+) *\\(";
+	private static String extractFunctionName (String functionSignature, String fileType) {
+		String methodNamePattern;
+		methodNamePattern = "([a-zA-Z0-9_$]+) *\\(";
+
 		Pattern pattern = Pattern.compile(methodNamePattern);
 		Matcher matcher = pattern.matcher(functionSignature);
-		matcher.find();
-		String functionName = matcher.group(1);
+		String functionName = null;
+		if(matcher.find())
+			functionName = matcher.group(1);
+		else
+			functionName = "init";
 		return functionName;
 	}
 
@@ -240,7 +256,4 @@ public class FileReader {
 
 		return matcher.replaceAll("");
 	}
-
-
-
 }
