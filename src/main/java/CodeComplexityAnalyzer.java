@@ -1,17 +1,18 @@
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class CodeComplexityAnalyzer {
 
 	public enum JavaConditionals {
-		IF_STATEMENT("if"),
-		ELSE_STATEMENT("else"),
-		ELSE_IF_STATEMENT("else if"),
-		SWITCH_CASE("case"),
+		IF_STATEMENT("\\bif\\s*\\([^)]*\\)"),
+		ELSE_STATEMENT("\\belse(?:\\s+|\\{)"),
+		ELSE_IF_STATEMENT("\\belse\\s+if\\s*\\([^)]*\\)"),
+		SWITCH_CASE("\\bcase\\s+[^:]+:"),
 		SWITCH_DEFAULT("default"),
-		FOR_LOOP("for"),
-		WHILE_LOOP("while"),
+		FOR_LOOP("\\bfor\\s*\\([^)]*\\)"),
+		WHILE_LOOP("\\bwhile\\s*\\([^)]*\\)"),
 		TERNARY_OPERATOR("[?][^?]+:[^?]+");
 
 		private final Pattern codePattern;
@@ -23,11 +24,18 @@ public class CodeComplexityAnalyzer {
 		}
 	}
 
+	public static List<Pair<String, Integer>> evaluateComplexity(List<Function> functions, int resultLength) {
+		return functions.stream()
+				.map(CodeComplexityAnalyzer::evaluateComplexityOfAMethod)
+				       .filter(pair -> !pair.second().equals(0))
+				.sorted((pair1, pair2) -> -Integer.compare(pair1.second(), pair2.second()))
+				.limit(resultLength)
+				.collect(Collectors.toList());
+	}
+
 	//TODO: document why i decided to count if, else, else if separately
-	//TODO: implement KMP-algo to count for substrings
-	//TODO: Implement search for ternary operator for java
-	//TODO: do not count any conditional operators that are in strings in the code.
-	public static Pair<String, Integer> evaluateComplexity (Function methodToAnalyze) {
+	//TODO: do not count any conditional operators that are in the comments!
+	protected static Pair<String, Integer> evaluateComplexityOfAMethod (Function methodToAnalyze) {
 		String codeToAnalyze = emptyTheStringLiterals(methodToAnalyze.body());
 		int complexity = 0;
 
