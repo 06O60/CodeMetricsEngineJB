@@ -11,6 +11,9 @@ public class CodeAnalyzer {
 	private final FileReader fileReader;
 	private final int numOfResults;
 
+	private static String ANSI_YELLOW = "\u001B[33m";
+	private static String ANSI_RESET = "\u001B[0m";
+	private static String ANSI_RED = "\u001B[31m";
 	/**
 	 * Constructs a CodeAnalyzer object with the specified directory path and number of results to display.
 	 *
@@ -32,10 +35,10 @@ public class CodeAnalyzer {
 		StringBuilder stringBuilder = new StringBuilder();
 		String fileName = fileReader.getNextFileName();
 		if(fileName == null)
-			stringBuilder.append("No files to analyze in the provided directory.");
+			stringBuilder.append(ANSI_RED+"No files to analyze in the provided directory."+ANSI_RESET);
 		while (fileName != null) {
-			stringBuilder.append(String.format("Code analysis of file %s:\n", fileName));
-			stringBuilder.append(analyzeFile());
+			stringBuilder.append(ANSI_YELLOW + String.format("Code analysis of file %s:\n", fileName) + ANSI_RESET);
+			stringBuilder.append(analyzeFile(fileName.endsWith(".java") ? "java": "kotlin"));
 			stringBuilder.append("\n");
 			fileName = fileReader.getNextFileName();
 		}
@@ -47,7 +50,7 @@ public class CodeAnalyzer {
 	 *
 	 * @return A string containing the analysis results.
 	 */
-	private String analyzeFile () {
+	private String analyzeFile (String fileType) {
 		List<Function> functionsToAnalyze = new ArrayList<>();
 		Function functionToAnalyze = fileReader.getNextFunction();
 
@@ -58,7 +61,7 @@ public class CodeAnalyzer {
 
 		StringBuilder stringBuilder = new StringBuilder();
 
-		stringBuilder.append(generateCodeComplexityReport(functionsToAnalyze, numOfResults));
+		stringBuilder.append(generateCodeComplexityReport(functionsToAnalyze, numOfResults, fileType));
 		stringBuilder.append(generateCodeStyleReport(functionsToAnalyze));
 
 		return stringBuilder.toString();
@@ -91,17 +94,20 @@ public class CodeAnalyzer {
 	 * @param numOfResults      The number of results to display for code complexity analysis.
 	 * @return A string containing the code complexity analysis report.
 	 */
-	private String generateCodeComplexityReport (List<Function> functionsToAnalyze, int numOfResults) {
+	private String generateCodeComplexityReport (List<Function> functionsToAnalyze, int numOfResults, String fileType) {
 		StringBuilder stringBuilder = new StringBuilder();
 		List<Pair<String, Integer>> codeComplexityResult = CodeComplexityAnalyzer.evaluateComplexity(
 				functionsToAnalyze,
-				numOfResults
+				numOfResults,
+				fileType
 		);
 
 		stringBuilder.append(
 				String.format("========== Code complexity (showing top %d results) ==========\n", numOfResults));
-		if (codeComplexityResult.isEmpty())
+		if (functionsToAnalyze.isEmpty())
 			stringBuilder.append("No methods to perform code complexity analysis found.\n");
+		else if(codeComplexityResult.isEmpty())
+			stringBuilder.append("There are no methods with non-zero code complexity!");
 		int resCount = 1;
 		for (Pair<String, Integer> p : codeComplexityResult) {
 			stringBuilder.append(String.format("%d. Function: %s, Complexity: %d\n",
