@@ -111,9 +111,9 @@ public class CodeComplexityAnalyzerTest {
 			"newSwitchCaseMethod, switch (x) { case true -> 'One'; case false -> 'Zero'; }, 2",
 			"ternaryOperatorMethod, x > 0 ? 'Positive' : 'Negative', 2"  // Ternary operator method
 	})
-	public void testEvaluateComplexity(String methodName, String methodBody, int expectedComplexity) {
+	public void testEvaluateComplexityOfAMethod(String methodName, String methodBody, int expectedComplexity) {
 		Function methodToAnalyze = new Function(methodName, methodBody);
-		Pair<String, Integer> result = CodeComplexityAnalyzer.evaluateComplexity(methodToAnalyze);
+		Pair<String, Integer> result = CodeComplexityAnalyzer.evaluateComplexityOfAMethod(methodToAnalyze);
 		assertEquals(expectedComplexity, result.second());
 	}
 }
