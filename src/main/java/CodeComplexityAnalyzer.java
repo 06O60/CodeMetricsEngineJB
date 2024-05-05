@@ -1,3 +1,4 @@
+import java.util.EnumSet;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -12,8 +13,7 @@ public class CodeComplexityAnalyzer {
 		IF_STATEMENT("\\bif\\s*\\([^)]*\\)"),
 		ELSE_STATEMENT("\\belse(?:\\s+|\\{)"),
 		ELSE_IF_STATEMENT("\\belse\\s+if\\s*\\([^)]*\\)"),
-		SWITCH_CASE("\\bcase\\s+[^:]+:"),
-		SWITCH_DEFAULT("default"),
+		SWITCH_CASE("\\bswitch\\s*\\([^)]*\\)"),
 		FOR_LOOP("\\bfor\\s*\\([^)]*\\)"),
 		WHILE_LOOP("\\bwhile\\s*\\([^)]*\\)"),
 		TERNARY_OPERATOR("[?][^?]+:[^?]+");
@@ -33,6 +33,28 @@ public class CodeComplexityAnalyzer {
 		}
 	}
 
+	public enum KotlinConditionals {
+		IF_STATEMENT("\\bif\\s*\\([^)]*\\)"),
+		ELSE_STATEMENT("\\belse(?:\\s+|\\{)"),
+		ELSE_IF_STATEMENT("\\belse\\s+if\\s*\\([^)]*\\)"),
+		SWITCH_CASE("\\bswitch\\s*\\([^)]*\\)"),
+		FOR_LOOP("\\bfor\\s*\\([^)]*\\)"),
+		WHILE_LOOP("\\bwhile\\s*\\([^)]*\\)");
+
+		private final Pattern codePattern;
+		KotlinConditionals (String codeString) {
+			this.codePattern = Pattern.compile(codeString);
+		}
+
+		/**
+		 * Get the pattern associated with the conditional.
+		 *
+		 * @return The pattern.
+		 */
+		public Pattern getCodePattern() {
+			return codePattern;
+		}
+	}
 	/**
 	 * Evaluates the complexity of a list of functions.
 	 * NOTE: this function skips functions with complexity 0
@@ -43,9 +65,10 @@ public class CodeComplexityAnalyzer {
 	 * @return A list of pairs containing method names and their complexity, sorted from highest to lowest complexity.
 	 */
 
-	public static List<Pair<String, Integer>> evaluateComplexity(List<Function> functions, int resultLength) {
+	public static List<Pair<String, Integer>> evaluateComplexity(List<Function> functions, int resultLength,
+	                                                             String fileType) {
 		return functions.stream()
-				.map(CodeComplexityAnalyzer::evaluateComplexityOfAMethod)
+				.map((Function methodToAnalyze) -> evaluateComplexityOfAMethod(methodToAnalyze, fileType))
 				       .filter(pair -> !pair.second().equals(0))
 				.sorted((pair1, pair2) -> -Integer.compare(pair1.second(), pair2.second()))
 				.limit(resultLength)
@@ -59,12 +82,18 @@ public class CodeComplexityAnalyzer {
 	 * @param methodToAnalyze The method to analyze.
 	 * @return A pair containing the method name and its complexity.
 	 */
-	protected static Pair<String, Integer> evaluateComplexityOfAMethod (Function methodToAnalyze) {
+	protected static Pair<String, Integer> evaluateComplexityOfAMethod (Function methodToAnalyze, String fileType) {
 		String codeToAnalyze = methodToAnalyze.body();
 		int complexity = 0;
 
-		for(JavaConditionals conditional: JavaConditionals.values()) {
-			Pattern pattern = conditional.getCodePattern();
+		EnumSet<? extends Enum<?>> conditionals = (fileType.equals("Kotlin")) ?
+				                                          EnumSet.allOf(KotlinConditionals.class) :
+				                                          EnumSet.allOf(JavaConditionals.class);
+
+		for (Enum<?> conditional : conditionals) {
+			Pattern pattern = (conditional instanceof JavaConditionals) ?
+					                  ((JavaConditionals) conditional).getCodePattern() :
+					                  ((KotlinConditionals) conditional).getCodePattern();
 			Matcher matcher = pattern.matcher(codeToAnalyze);
 			int count = 0;
 			while(matcher.find()) count++;
