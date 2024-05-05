@@ -156,7 +156,8 @@ public class FileReader {
 		String functionName = extractFunctionName(functionSignature);
 		int functionStartIndex = fileContents.indexOf(functionSignature);
 		int functionEndIndex = findFunctionEndIndex(functionStartIndex, fileContents);
-		return new Function(functionName, fileContents.substring(functionStartIndex, functionEndIndex));
+		String functionBody =fileContents.substring(functionStartIndex, functionEndIndex);
+		return new Function(functionName, cleanUpRedundantPiecesOfCode(functionBody));
 	}
 
 	private static String extractFunctionName (String functionSignature) {
@@ -193,5 +194,23 @@ public class FileReader {
 		return index; // Function end not found, return end of file
 	}
 
+	protected static String emptyTheStringLiterals(String code) {
+		Pattern pattern = Pattern.compile("\"[^\"]*\"");
+		Matcher matcher = pattern.matcher(code);
+
+		//so any "sdfgd" is in the end ""
+		return matcher.replaceAll("\"\"");
+	}
+	protected static String deleteCommentedOutCode(String code) {
+		Pattern pattern = Pattern.compile("//.*|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/");
+		Matcher matcher = pattern.matcher(code);
+
+		return matcher.replaceAll("");
+	}
+
+	protected static String cleanUpRedundantPiecesOfCode(String code) {
+		code = emptyTheStringLiterals(code);
+		return deleteCommentedOutCode(code);
+	}
 
 }
